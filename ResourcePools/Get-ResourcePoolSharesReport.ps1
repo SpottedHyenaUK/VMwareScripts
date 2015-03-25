@@ -162,13 +162,15 @@ Try{
 
     $HtmlHeader = "<head><style>"
     $HtmlHeader += "body { background-color: white; color: rgb(64, 64, 64); font-family: Calibri, sans-serif, sans-serif; }"
-    $HtmlHeader += "h1 { font-size: 26pt; font-weight: bold; color: rgb(0, 177, 235); letter-spacing: -1.4pt; padding: 0pt; margin: 0pt; margin-top: 6pt; }"
+    $HtmlHeader += "h1 { font-size: 26pt; font-weight: bold; color: rgb(0,210,255); letter-spacing: -1.4pt; padding: 0pt; margin: 0pt; margin-top: 6pt; }"
     $HtmlHeader += "h1 small { font-size: 14pt; font-weight: normal; padding: 0pt; margin: 0pt; }"
-    $HtmlHeader += "h2 { font-size: 18pt; font-weight: bold; color: rgb(0, 177, 235); padding: 0pt; margin: 18pt 0pt 10pt 0pt; }"
+    $HtmlHeader += "h2 { font-size: 18pt; font-weight: bold; color: rgb(0,210,255); padding: 0pt; margin: 18pt 0pt 10pt 0pt; }"
     $HtmlHeader += "p { font-size: 11pt; margin: 0pt 0pt 6pt 0pt; line-height: 1.1; }"
     $HtmlHeader += "table { border-collapse: collapse; border-width: 1pt; border-color: white; border-style: solid; margin-top: 12pt; margin-bottom: 10pt;}"
-    $HtmlHeader += "th { font-weight: normal; background-color: rgb(0, 177, 235); color: white; border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em; }"
+    $HtmlHeader += "th { font-weight: normal; background-color: rgb(0,210,255); color: white; border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em; }"
     $HtmlHeader += "td { font-weight: normal; background-color: rgb(217, 217, 217); color: rgb(64, 64, 64); border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em;}"
+    $HtmlHeader += "footer { font-weight: normal; background-color: white; color: rgb(64, 64, 64); text-transform: uppercase; padding: 0.25em 1em;}"
+
     $HtmlHeader += "</style></head>"
     
     Set-Content $report $HtmlHeader
@@ -204,7 +206,7 @@ Try{
         }
 
     }
-
+    Add-Content $report "<footer><center>Script Created by <a href='http://spottedhyena.co.uk'>www.spottedhyena.co.uk</a></center><footer>"
 }
 Catch{
     # catch any exceptions
