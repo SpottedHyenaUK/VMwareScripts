@@ -63,7 +63,7 @@ Param(
         [switch]$Reservation,
         [switch]$Limit,
         [string]$Report="Report.html",
-        [string]$CpuShares="2000,4000,8000",
+        [string]$CpuShares="500,1000,2000",
         [string]$MemShares="5,10,20"
 )
 Try{    
