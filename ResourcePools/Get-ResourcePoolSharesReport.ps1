@@ -38,16 +38,21 @@
     Set the share value you would like to have for Low/normal/high and the script will calculate
     the values for you, default values are "5,10,20" following VMware standards
 
+.PARAMETER ExportHTML
+	If included this will output a file Report.html in the director the report was executed, excluding this will output the results to screen
+
+.PARAMETER Report
+	Default report will be palaced in the directory the script is run from called "Report.html", allos an alternative report path
+	
 .EXAMPLE
     .\Get-ResourcePoolSharesReport.ps1 -Csv .\ResourcePoolShares.csv 
 .EXAMPLE    
     .\Get-ResourcePoolSharesReport.ps1 -vCenter "my-vc01.yoursite.com"
 .EXAMPLE
-    .\Get-ResourcePoolSharesReport.ps1 -vCenter "my-vc01.yoursite.com" -PerVmShares -RecommendedShares -CpuShares "2000,4000,8000" -MemShares "5,10,20" -reservation -limit
+    .\Get-ResourcePoolSharesReport.ps1 -vCenter "my-vc01.yoursite.com" -PerVmShares -RecommendedShares -CpuShares "2000,4000,8000" -MemShares "5,10,20" -reservation -limit -exporthtml -Report "c:\MyReport.html"
  
 .NOTES
     Script created by Steven Marks www.spottedhyena.co.uk
- 
 #>
 [CmdletBinding()]
 Param(
@@ -62,11 +67,14 @@ Param(
         [switch]$RecommendedShares,
         [switch]$Reservation,
         [switch]$Limit,
-        [string]$Report="Report.html",
+        [switch]$ExportHTML,
+		[string]$Report="Report.html",
         [string]$CpuShares="500,1000,2000",
         [string]$MemShares="5,10,20"
+		
 )
-Try{    
+Try{   
+ 
     If ((Get-PSSnapin -Name VMware.VimAutomation.Core -ErrorAction SilentlyContinue) -eq $null) { Add-PSSnapin VMware.VimAutomation.Core }
     
     function Get-vCenterClusterPools{
@@ -74,10 +82,15 @@ Try{
         $clusters = $null
         $clusters = Get-Cluster
     
+
         ## Enumerate Members of Cluster
         Foreach($cluster in $clusters){
-            Add-Content $report "<h3>$cluster</h3>"
-        
+			if($ExportHTML){
+				Add-Content $report "<h3>$cluster</h3>"
+			}else{
+				echo $cluster
+			}
+                    
             $rpools = $null
             [array]$rpools = Get-ResourcePool -Location $cluster
             ### Get total memory in cluster ##
@@ -111,15 +124,16 @@ Try{
             
                         $objAverage = New-Object System.Object
                         $objAverage | Add-Member -type NoteProperty -name ResourcePool -value $rpool.name
-                        $objAverage | Add-Member -type NoteProperty -name "RAM Shares" -value $totalmemshares 
                         $objAverage | Add-Member -type NoteProperty -name "CPU Shares" -value $totalcpushares 
-
+						$objAverage | Add-Member -type NoteProperty -name "RAM Shares" -value $totalmemshares 
+                        
                         $objAverage | Add-Member -type NoteProperty -name "Total VMs" -value $totalvms
-                        $objAverage | Add-Member -type NoteProperty -name "Total RAM (MB)" -value $totalram
                         $objAverage | Add-Member -type NoteProperty -name "Total CPU" -value $totalcpu
+						$objAverage | Add-Member -type NoteProperty -name "Total RAM (MB)" -value $totalram
+						
                         if($PerVmShares){
-                            $objAverage | Add-Member -type NoteProperty -name "Shares Per MB RAM" -value $totalpermem
                             $objAverage | Add-Member -type NoteProperty -name "Shares Per CPU" -value $totalpercpu
+							$objAverage | Add-Member -type NoteProperty -name "Shares Per MB RAM" -value $totalpermem
                         }
                         if($RecommendedShares){
                             
@@ -136,54 +150,68 @@ Try{
                             $high = [int]$totalcpu * [int]$CpuShares[2]
                             $recommendedcpu = "$low / $normal / $high"
                             
-                            $objAverage | Add-Member -type NoteProperty -name "Recommended RAM LOW/NORMAL/HIGH" -value $recommendedmem
                             $objAverage | Add-Member -type NoteProperty -name "Recommended CPU LOW/NORMAL/HIGH" -value $recommendedcpu
+							$objAverage | Add-Member -type NoteProperty -name "Recommended RAM LOW/NORMAL/HIGH" -value $recommendedmem 
                         }
                         if($reservation){
-                            $objAverage | Add-Member -type NoteProperty -name "RAM Reservation" -value $rpool.MemReservationMB
                             $objAverage | Add-Member -type NoteProperty -name "CPU Reservation" -value $rpool.CpuReservationMhz
+							$objAverage | Add-Member -type NoteProperty -name "RAM Reservation" -value $rpool.MemReservationMB
                         }
                         if($limit){
-                            $objAverage | Add-Member -type NoteProperty -name "RAM Limit" -value $rpool.MemLimitMB
                             $objAverage | Add-Member -type NoteProperty -name "CPU Limit" -value $rpool.CpuLimitMhz
+							$objAverage | Add-Member -type NoteProperty -name "RAM Limit" -value $rpool.MemLimitMB 
                         }
 
                     $sharesallocation  += $objAverage    
                     }
                 } 
             }
-            $sharesallocation | ConvertTo-Html -Fragment | Add-Content $report
-        
-        }
+			if($ExportHTML){
+				$sharesallocation | ConvertTo-Html -Fragment | Add-Content $report
+			}else{
+			####write results to console####
+				echo $sharesallocation | out-gridview
+			}
+				
+			}
 
     }
 
+	
+	
+
     ### BEGIN PROCESSING SCRIPT ###
+  if($ExportHTML){
+		$HtmlHeader = "<head><style>"
+		$HtmlHeader += "body { background-color: white; color: rgb(64, 64, 64); font-family: Calibri, sans-serif, sans-serif; }"
+		$HtmlHeader += "h1 { font-size: 26pt; font-weight: bold; color: rgb(0,210,255); letter-spacing: -1.4pt; padding: 0pt; margin: 0pt; margin-top: 6pt; }"
+		$HtmlHeader += "h1 small { font-size: 14pt; font-weight: normal; padding: 0pt; margin: 0pt; }"
+		$HtmlHeader += "h2 { font-size: 18pt; font-weight: bold; color: rgb(0,210,255); padding: 0pt; margin: 18pt 0pt 10pt 0pt; }"
+		$HtmlHeader += "p { font-size: 11pt; margin: 0pt 0pt 6pt 0pt; line-height: 1.1; }"
+		$HtmlHeader += "table { border-collapse: collapse; border-width: 1pt; border-color: white; border-style: solid; margin-top: 12pt; margin-bottom: 10pt;}"
+		$HtmlHeader += "th { font-weight: normal; background-color: rgb(0,210,255); color: white; border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em; }"
+		$HtmlHeader += "td { font-weight: normal; background-color: rgb(217, 217, 217); color: rgb(64, 64, 64); border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em;}"
+		$HtmlHeader += "footer { font-weight: normal; background-color: white; color: rgb(64, 64, 64); text-transform: uppercase; padding: 0.25em 1em;}"
 
-    $HtmlHeader = "<head><style>"
-    $HtmlHeader += "body { background-color: white; color: rgb(64, 64, 64); font-family: Calibri, sans-serif, sans-serif; }"
-    $HtmlHeader += "h1 { font-size: 26pt; font-weight: bold; color: rgb(0,210,255); letter-spacing: -1.4pt; padding: 0pt; margin: 0pt; margin-top: 6pt; }"
-    $HtmlHeader += "h1 small { font-size: 14pt; font-weight: normal; padding: 0pt; margin: 0pt; }"
-    $HtmlHeader += "h2 { font-size: 18pt; font-weight: bold; color: rgb(0,210,255); padding: 0pt; margin: 18pt 0pt 10pt 0pt; }"
-    $HtmlHeader += "p { font-size: 11pt; margin: 0pt 0pt 6pt 0pt; line-height: 1.1; }"
-    $HtmlHeader += "table { border-collapse: collapse; border-width: 1pt; border-color: white; border-style: solid; margin-top: 12pt; margin-bottom: 10pt;}"
-    $HtmlHeader += "th { font-weight: normal; background-color: rgb(0,210,255); color: white; border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em; }"
-    $HtmlHeader += "td { font-weight: normal; background-color: rgb(217, 217, 217); color: rgb(64, 64, 64); border: 1px solid white; text-transform: uppercase; padding: 0.25em 1em;}"
-    $HtmlHeader += "footer { font-weight: normal; background-color: white; color: rgb(64, 64, 64); text-transform: uppercase; padding: 0.25em 1em;}"
-
-    $HtmlHeader += "</style></head>"
-    
-    Set-Content $report $HtmlHeader
-    Add-Content $report "<h1>Resource Pool Shares</h1>"
-
+		$HtmlHeader += "</style></head>"
+		
+		Set-Content $report $HtmlHeader
+		Add-Content $report "<h1>Resource Pool Shares</h1>"
+	}
+	
     if($vCenter){
+	
         $cred = Get-Credential
         ## Connect to the vCenter Server
         $viServer = Connect-VIServer -Server $vCenter -Credential $cred
 
         ## Create HTML Document
-        Add-Content $report "<h2>$vCenter</h2>"
-    
+		if($ExportHTML){
+			Add-Content $report "<h2>$vCenter</h2>"
+		}else{
+			echo $vCenter
+		}
+		
         Get-vCenterClusterPools
 
         Disconnect-VIServer -Server $vCenter -Confirm:$false -Force -ErrorAction SilentlyContinue
@@ -198,15 +226,22 @@ Try{
             $viServer = Connect-VIServer -Server $vCenter -User $_.User -Password $_.Pass
 
             ## Create HTML Document
-            Add-Content $report "<h2>$vCenter</h2>"
-        
+		    if($ExportHTML){
+				Add-Content $report "<h2>$vCenter</h2>"
+			}else{
+				echo $vCenter
+			}
             Get-vCenterClusterPools
 
             Disconnect-VIServer -Server $_.FQDN -Confirm:$false -Force -ErrorAction SilentlyContinue
         }
 
     }
-    Add-Content $report "<footer><center>Script Created by <a href='http://spottedhyena.co.uk'>www.spottedhyena.co.uk</a></center><footer>"
+	if($ExportHTML){
+		    Add-Content $report "<footer><center>Script Created by <a href='http://spottedhyena.co.uk'>www.spottedhyena.co.uk</a></center><footer>"
+	}
+
+	
 }
 Catch{
     # catch any exceptions
