@@ -43,7 +43,7 @@
 .EXAMPLE    
     .\Get-ResourcePoolSharesReport.ps1 -vCenter "my-vc01.yoursite.com"
 .EXAMPLE
-    .\Get-ResourcePoolSharesReport.ps1 -vCenter "my-vc01.yoursite.com" -PerVmShares -RecommendedShares -CpuShares "2000,4000,8000" -MemShares "5,10,20" -reservation -limit
+    .\Get-ResourcePoolSharesReport.ps1 -vCenter "my-vc01.yoursite.com" -PerVmShares -RecommendedShares -CpuShares "500,1000,2000" -MemShares "5,10,20" -reservation -limit
  
 .NOTES
     Script created by Steven Marks www.spottedhyena.co.uk
@@ -111,15 +111,17 @@ Try{
             
                         $objAverage = New-Object System.Object
                         $objAverage | Add-Member -type NoteProperty -name ResourcePool -value $rpool.name
-                        $objAverage | Add-Member -type NoteProperty -name "RAM Shares" -value $totalmemshares 
                         $objAverage | Add-Member -type NoteProperty -name "CPU Shares" -value $totalcpushares 
+                        $objAverage | Add-Member -type NoteProperty -name "RAM Shares" -value $totalmemshares 
+                        
 
                         $objAverage | Add-Member -type NoteProperty -name "Total VMs" -value $totalvms
-                        $objAverage | Add-Member -type NoteProperty -name "Total RAM (MB)" -value $totalram
                         $objAverage | Add-Member -type NoteProperty -name "Total CPU" -value $totalcpu
+                        $objAverage | Add-Member -type NoteProperty -name "Total RAM (MB)" -value $totalram
+                        
                         if($PerVmShares){
-                            $objAverage | Add-Member -type NoteProperty -name "Shares Per MB RAM" -value $totalpermem
                             $objAverage | Add-Member -type NoteProperty -name "Shares Per CPU" -value $totalpercpu
+                            $objAverage | Add-Member -type NoteProperty -name "Shares Per MB RAM" -value $totalpermem
                         }
                         if($RecommendedShares){
                             
@@ -136,16 +138,16 @@ Try{
                             $high = [int]$totalcpu * [int]$CpuShares[2]
                             $recommendedcpu = "$low / $normal / $high"
                             
-                            $objAverage | Add-Member -type NoteProperty -name "Recommended RAM LOW/NORMAL/HIGH" -value $recommendedmem
                             $objAverage | Add-Member -type NoteProperty -name "Recommended CPU LOW/NORMAL/HIGH" -value $recommendedcpu
+                            $objAverage | Add-Member -type NoteProperty -name "Recommended RAM LOW/NORMAL/HIGH" -value $recommendedmem
                         }
                         if($reservation){
-                            $objAverage | Add-Member -type NoteProperty -name "RAM Reservation" -value $rpool.MemReservationMB
                             $objAverage | Add-Member -type NoteProperty -name "CPU Reservation" -value $rpool.CpuReservationMhz
+                            $objAverage | Add-Member -type NoteProperty -name "RAM Reservation" -value $rpool.MemReservationMB
                         }
                         if($limit){
-                            $objAverage | Add-Member -type NoteProperty -name "RAM Limit" -value $rpool.MemLimitMB
                             $objAverage | Add-Member -type NoteProperty -name "CPU Limit" -value $rpool.CpuLimitMhz
+                            $objAverage | Add-Member -type NoteProperty -name "RAM Limit" -value $rpool.MemLimitMB
                         }
 
                     $sharesallocation  += $objAverage    
