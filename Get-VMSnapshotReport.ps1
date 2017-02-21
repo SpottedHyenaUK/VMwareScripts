@@ -72,10 +72,13 @@ Try {
     $compareDate = (Get-Date).AddHours(-$OlderThan)
 
     $snapshots = @()
+    $PhantomSnaps = @()
 
     # Connect to the vCenter Server
     $viServer = Connect-VIServer -Server $vcenter -User $user -Password $password
     $snapshots += Get-VM | Get-Snapshot | Where-Object {$_.Created -le $compareDate -and $_.Name -notlike "VCD-SNAPSHOT*" } | Select-Object VM,Name,Created,@{Label="SizeGB";Expression={[Math]::Round($_.SizeGB,2)}} 
+    $PhantomSnaps = Get-VM|?{((get-harddisk $_).count*2)*((get-snapshot -vm $_).count + 1) -lt ($_.extensiondata.layoutex.file|?{$_.name -like "*vmdk"}).count} | Select @{Label="vCenter";Expression={$vCenter}},Name
+                
     # Disconnect from the vCenter Server without prompting
     Disconnect-VIServer -Server $_.vcenter -Confirm:$False
 
@@ -101,10 +104,13 @@ Try {
         $EmailBody += "</small></h1>"
         $EmailBody += "<p>This report highlights any VMware level snapshots that currently exist on $vCenter. These snapshots should be removed where possible to avoid performance issues that can occur with long-term snapshots in vSphere environments.</p>"
 
+        $frag1 = $snapshots | Sort-Object -Property vCenter,Created | ConvertTo-Html -fragment -PreContent '<h2>Snapshots</h2>' | Out-String
+        $frag2 = $PhantomSnaps | Sort-Object -Property vCenter,Name | ConvertTo-Html -fragment -PreContent '<h2>Phantom Snapshots</h2>' | Out-String
+
         $mailMessage.From = $EmailFrom
         $mailMessage.To.Add($EmailTo)
         $mailMessage.Subject = $EmailSubject
-        $mailMessage.Body = $snapshots | Sort-Object -Property vCenter,Created | ConvertTo-Html -Body $EmailBody -Head $EmailHeader
+        $mailMessage.Body = ConvertTo-Html -Head $EmailHeader -body $EmailBody -PostContent $frag1,$frag2
         $mailMessage.IsBodyHTML = $true
         $smtp.Send($mailMessage)
         exit 0
@@ -142,10 +148,14 @@ Catch
 
     $EmailSubject += " (Some errors occured)"
 
+    $frag1 = $snapshots | Sort-Object -Property vCenter,Created | ConvertTo-Html -fragment -PreContent '<h2>Snapshots</h2>' | Out-String
+    $frag2 = $PhantomSnaps | Sort-Object -Property vCenter,Name | ConvertTo-Html -fragment -PreContent '<h2>Phantom Snapshots</h2>' | Out-String
+
+
     $mailMessage.From = $EmailFrom
     $mailMessage.To.Add($EmailTo)
     $mailMessage.Subject = $EmailSubject
-    $mailMessage.Body = $snapshots | Sort-Object -Property vCenter,Created | ConvertTo-Html -Body $EmailBody -Head $EmailHeader
+    $mailMessage.Body = ConvertTo-Html -Head $EmailHeader -body $EmailBody -PostContent $frag1,$frag2
     $mailMessage.IsBodyHTML = $true
     $smtp.Send($mailMessage)
     Write-Host "Last vCenter: " $vCenter
